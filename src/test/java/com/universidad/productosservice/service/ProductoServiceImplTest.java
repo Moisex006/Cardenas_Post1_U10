@@ -13,11 +13,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceImplTest {
@@ -30,8 +37,6 @@ class ProductoServiceImplTest {
 
     @Captor
     private ArgumentCaptor<Producto> productoCaptor;
-
-    // ── PASO 3: Happy Path ──────────────────────────────────────────
 
     @Test
     void crear_datosValidos_retornaProductoGuardado() {
@@ -46,6 +51,20 @@ class ProductoServiceImplTest {
     }
 
     @Test
+    void listarTodos_productosExistentes_retornaListaCompleta() {
+        List<Producto> productos = List.of(
+                new Producto(1L, "Laptop", 1500.0, 10),
+                new Producto(2L, "Mouse", 50.0, 100));
+        when(productoRepository.findAll()).thenReturn(productos);
+
+        List<Producto> resultado = productoService.listarTodos();
+
+        assertEquals(2, resultado.size());
+        assertEquals("Laptop", resultado.getFirst().getNombre());
+        verify(productoRepository).findAll();
+    }
+
+    @Test
     void buscarPorId_existente_retornaProducto() {
         Producto producto = new Producto(1L, "Mouse", 50.0, 100);
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
@@ -56,41 +75,34 @@ class ProductoServiceImplTest {
         assertEquals(50.0, resultado.getPrecio());
     }
 
-    // ── PASO 4: Casos negativos y @ParameterizedTest ────────────────
-
     @Test
     void buscarPorId_noExistente_lanzaRuntimeException() {
         when(productoRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class,
-                () -> productoService.buscarPorId(99L));
+        assertThrows(RuntimeException.class, () -> productoService.buscarPorId(99L));
     }
 
     @ParameterizedTest
     @NullAndEmptySource
     @ValueSource(strings = {" ", "\t", "\n"})
     void crear_nombreInvalido_lanzaIllegalArgumentException(String nombre) {
-        assertThrows(IllegalArgumentException.class,
-                () -> productoService.crear(nombre, 100.0, 5));
+        assertThrows(IllegalArgumentException.class, () -> productoService.crear(nombre, 100.0, 5));
         verifyNoInteractions(productoRepository);
     }
 
     @ParameterizedTest
     @ValueSource(doubles = {0.0, -1.0, -100.0, -0.01})
     void crear_precioInvalido_lanzaIllegalArgumentException(double precio) {
-        assertThrows(IllegalArgumentException.class,
-                () -> productoService.crear("Producto", precio, 5));
+        assertThrows(IllegalArgumentException.class, () -> productoService.crear("Producto", precio, 5));
         verifyNoInteractions(productoRepository);
     }
-
-    // ── PASO 5: ArgumentCaptor y verificación avanzada ──────────────
 
     @Test
     void crear_nombreConEspacios_guardaNombreNormalizado() {
         when(productoRepository.save(any())).thenAnswer(inv -> {
-            Producto p = inv.getArgument(0);
-            p.setId(1L);
-            return p;
+            Producto producto = inv.getArgument(0);
+            producto.setId(1L);
+            return producto;
         });
 
         productoService.crear("  Laptop Pro  ", 1500.0, 5);
