@@ -26,20 +26,27 @@ public class ProductoController {
 
     @GetMapping
     public ResponseEntity<List<Producto>> listar() {
-        return ResponseEntity.ok(productoService.listarTodos());
+        return ResponseEntity.ok(productoService.listar());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Producto> buscar(@PathVariable Long id) {
-        return ResponseEntity.ok(productoService.buscarPorId(id));
+        Producto producto = productoService.buscar(id);
+        if (producto == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(producto);
     }
 
     @PostMapping
     public ResponseEntity<Producto> crear(@RequestBody Producto producto) {
-        Producto creado = productoService.crear(
+        Producto creado = productoService.procesarProducto(
                 producto.getNombre(),
                 producto.getPrecio(),
-                producto.getStock());
+                producto.getStock(),
+                null,
+                true,
+                null);
         return ResponseEntity.status(HttpStatus.CREATED).body(creado);
     }
 

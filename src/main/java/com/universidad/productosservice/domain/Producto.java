@@ -1,27 +1,29 @@
 package com.universidad.productosservice.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "productos")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Producto {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String nombre;
-
-    @Column(nullable = false)
+    private String nombre; // Bug: sin @Column(nullable = false)
     private Double precio;
-
-    @Column(nullable = false)
     private Integer stock;
+
+    // TODO: mover esta logica de estado fuera de la entidad JPA
+    public String getEstado() {
+        if (stock == null) return "DESCONOCIDO"; // Bug potencial
+        if (stock == 0) return "AGOTADO";
+        if (stock > 0 && stock <= 5) return "BAJO";
+        if (stock > 5 && stock <= 20) return "NORMAL";
+        if (stock > 20 && stock <= 50) return "ALTO";
+        if (stock > 50 && stock <= 100) return "MUY_ALTO";
+        if (stock > 100) return "EXCEDENTE";
+        return "DESCONOCIDO"; // Code Smell: rama inalcanzable
+    }
 }

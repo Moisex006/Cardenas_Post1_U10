@@ -2,58 +2,60 @@ package com.universidad.productosservice.service;
 
 import com.universidad.productosservice.domain.Producto;
 import com.universidad.productosservice.repository.ProductoRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ProductoServiceImpl implements ProductoService {
 
-    private final ProductoRepository productoRepository;
-
-    public ProductoServiceImpl(ProductoRepository productoRepository) {
-        this.productoRepository = productoRepository;
-    }
+    @Autowired
+    private ProductoRepository repo; // Code Smell: nombre generico e inyeccion por campo
 
     @Override
-    public List<Producto> listarTodos() {
-        return productoRepository.findAll();
-    }
-
-    @Override
-    public Producto crear(String nombre, Double precio, Integer stock) {
-        if (nombre == null || nombre.isBlank()) {
-            throw new IllegalArgumentException("El nombre no puede estar vacio");
+    public Producto procesarProducto(String n, Double p, Integer s,
+                                     String cat, boolean activo, String proveedor) {
+        Producto producto = new Producto();
+        if (n == null || n.equals("")) { // Code Smell: usar isBlank()
+            throw new IllegalArgumentException("nombre requerido");
         }
-        if (precio == null || precio <= 0) {
-            throw new IllegalArgumentException("El precio debe ser mayor a cero");
+        if (p == null) {
+            throw new IllegalArgumentException("precio requerido");
+        } else if (p <= 0) {
+            throw new IllegalArgumentException("precio invalido");
+        } else if (p > 999999) {
+            throw new IllegalArgumentException("precio excesivo");
         }
-        if (stock == null || stock < 0) {
-            throw new IllegalArgumentException("El stock no puede ser negativo");
+        if (s == null || s < 0) {
+            throw new IllegalArgumentException("stock invalido");
         }
-        Producto producto = new Producto(null, nombre.strip(), precio, stock);
-        return productoRepository.save(producto);
+        if (activo) {
+            if (cat != null && cat.equalsIgnoreCase("premium")) {
+                producto.setPrecio(p * 0.95);
+            } else if (cat != null && cat.equalsIgnoreCase("liquidacion")) {
+                producto.setPrecio(p * 0.80);
+            } else {
+                producto.setPrecio(p);
+            }
+        } else {
+            producto.setPrecio(p);
+        }
+        producto.setNombre(n);
+        producto.setStock(s);
+        // TODO: implementar logica de categoria y proveedor
+        return repo.save(producto);
     }
 
     @Override
-    public Producto buscarPorId(Long id) {
-        return productoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + id));
+    public List<Producto> listar() {
+        return repo.findAll();
     }
 
     @Override
-    public Producto actualizarStock(Long id, Integer nuevoStock) {
-        if (nuevoStock == null || nuevoStock < 0) {
-            throw new IllegalArgumentException("El stock no puede ser negativo");
-        }
-        Producto producto = buscarPorId(id);
-        producto.setStock(nuevoStock);
-        return productoRepository.save(producto);
-    }
-
-    @Override
-    public void eliminar(Long id) {
-        buscarPorId(id);
-        productoRepository.deleteById(id);
+    public Producto buscar(Long id) {
+        Optional<Producto> producto = repo.findById(id);
+        return producto.get(); // Bug: accede al Optional sin verificar si existe
     }
 }
