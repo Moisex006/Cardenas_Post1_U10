@@ -1,7 +1,6 @@
 # Productos Service - Analisis SonarQube
 
-Proyecto Spring Boot para el laboratorio de la Unidad 10: Metricas de Calidad y
-SonarQube. El codigo conserva problemas intencionales de calidad para ejecutar
+Metricas de Calidad y SonarQube. El codigo conserva problemas intencionales de calidad para ejecutar
 el analisis inicial, revisar el dashboard y documentar los hallazgos.
 
 ## Prerrequisitos
