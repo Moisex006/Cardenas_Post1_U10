@@ -110,25 +110,4 @@ Resultados reales del analisis ejecutado el 14 de mayo de 2026:
 
 ![Detalle Code Smells](docs/sonar-code-smells.png)
 
-## Checkpoints verificados
 
-| Checkpoint | Estado |
-| --- | --- |
-| Contenedor `sonarqube` corriendo en Docker | Verificado con `docker ps` |
-| Dashboard local carga en `localhost:9000` | Verificado y capturado |
-| `sonar-project.properties` en la raiz | Completado |
-| Plugin JaCoCo con `prepare-agent` y `report` | Completado |
-| `.\mvnw.cmd clean verify` | `BUILD SUCCESS`, 23 pruebas, 0 fallos |
-| Reporte JaCoCo XML | Generado en `target/site/jacoco/jacoco.xml` |
-| Analisis SonarQube | `BUILD SUCCESS` |
-| App Spring Boot inicia sin errores de contexto | Verificado con `java -jar target/productos-service-0.0.1-SNAPSHOT.jar` |
-| Capturas en `docs/` | `sonar-dashboard.png`, `sonar-bugs.png`, `sonar-code-smells.png` |
-
-## Entregables
-
-- `README.md` con instrucciones, tabla de resultados, hallazgos y capturas.
-- `sonar-project.properties` en la raiz.
-- Codigo fuente en `src/` con problemas intencionales para el analisis inicial.
-- Reporte JaCoCo generado por `.\mvnw.cmd clean verify`.
-- Capturas de SonarQube en `docs/`.
-- Historial Git con mas de 3 commits descriptivos.
