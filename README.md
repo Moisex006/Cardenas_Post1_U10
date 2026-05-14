@@ -1,97 +1,134 @@
-# Productos Service
+# Productos Service - Analisis SonarQube
 
+Proyecto Spring Boot para el laboratorio de la Unidad 10: Metricas de Calidad y
+SonarQube. El codigo conserva problemas intencionales de calidad para ejecutar
+el analisis inicial, revisar el dashboard y documentar los hallazgos.
 
+## Prerrequisitos
 
-Microservicio REST para gestionar productos, desarrollado con Spring Boot, Java 21,
-Spring Data JPA y Maven. Este proyecto corresponde al Post-Contenido 2 de la
-Unidad 9 e incluye pruebas unitarias, pruebas de integración para persistencia,
-pruebas web del controlador REST y reporte de cobertura con JaCoCo.
-
-## Tecnologias
-
-| Tecnologia | Uso |
+| Herramienta | Version/uso |
 | --- | --- |
-| Java 21 | Lenguaje base del proyecto |
-| Spring Boot 4 | Framework del microservicio |
-| Spring Web MVC | Capa REST |
-| Spring Data JPA | Persistencia |
-| H2 Database | Base de datos en memoria para pruebas |
-| JUnit 5 | Motor de pruebas |
-| Mockito | Mocks de la capa de servicio |
-| JaCoCo | Reporte de cobertura |
-| GitHub Actions | Integracion continua |
+| Java | JDK 21 o superior. Verificado localmente con Java 25.0.2 compilando con release 21 |
+| Maven | Maven Wrapper incluido: `.\mvnw.cmd` |
+| Docker Desktop | Requerido para SonarQube local |
+| IntelliJ IDEA | Importar como proyecto Maven y ejecutar los comandos desde Terminal |
 
-## Estructura
+## Levantar SonarQube
+
+```powershell
+docker run -d --name sonarqube -p 9000:9000 -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:community
+docker ps
+docker logs sonarqube
+```
+
+Acceder a `http://localhost:9000` con `admin / admin`, cambiar la contrasena y
+crear el proyecto:
+
+| Campo | Valor |
+| --- | --- |
+| Project name | `Productos Service` |
+| Project key | `com.universidad:productos-service` |
+
+## Ejecutar el build y JaCoCo
+
+```powershell
+.\mvnw.cmd clean verify
+```
+
+El comando compila, ejecuta pruebas y genera el reporte XML de JaCoCo en:
 
 ```text
-src/
-  main/java/com/universidad/productosservice/
-    controller/ProductoController.java
-    domain/Producto.java
-    repository/ProductoRepository.java
-    service/ProductoService.java
-    service/ProductoServiceImpl.java
-  test/java/com/universidad/productosservice/
-    controller/ProductoControllerTest.java
-    repository/ProductoRepositoryTest.java
-    service/ProductoServiceImplTest.java
-  test/resources/application-test.properties
-.github/workflows/ci.yml
-docs/jacoco-report.png
+target/site/jacoco/jacoco.xml
 ```
 
-## Endpoints
+## Ejecutar el analisis SonarQube
 
-| Metodo | Ruta | Descripcion |
-| --- | --- | --- |
-| GET | `/api/productos` | Lista todos los productos |
-| GET | `/api/productos/{id}` | Busca un producto por ID |
-| POST | `/api/productos` | Crea un producto |
+En PowerShell conviene envolver los argumentos `-D` entre comillas simples:
 
-## Ejecutar las pruebas
-
-```bash
-mvn test
-mvn verify
+```powershell
+.\mvnw.cmd sonar:sonar `
+  '-Dsonar.host.url=http://localhost:9000' `
+  '-Dsonar.projectKey=com.universidad:productos-service' `
+  '-Dsonar.projectName=Productos Service' `
+  '-Dsonar.token=TU_TOKEN'
 ```
 
-`mvn test` ejecuta las pruebas y genera `target/site/jacoco/index.html`.
-`mvn verify` es el comando usado por el pipeline de GitHub Actions.
-
-## Pruebas implementadas
-
-| Clase | Tipo | Casos cubiertos |
-| --- | --- | --- |
-| `ProductoServiceImplTest` | Unitarias | Creacion, listado, busqueda, validaciones, normalizacion y eliminacion |
-| `ProductoRepositoryTest` | `@DataJpaTest` | Guardar, buscar por ID, listar y eliminar con H2 |
-| `ProductoControllerTest` | `@WebMvcTest` | Listar productos, crear producto y respuesta 404 |
-
-Resultado local verificado:
+El dashboard queda disponible en:
 
 ```text
-Tests run: 23, Failures: 0, Errors: 0, Skipped: 0
-BUILD SUCCESS
+http://localhost:9000/dashboard?id=com.universidad%3Aproductos-service
 ```
 
-## Cobertura
+## Estado inicial del analisis
 
-La cobertura de lineas de `ProductoServiceImpl` es 72.7%, por encima del minimo
-solicitado de 70%.
+Resultados reales del analisis ejecutado el 14 de mayo de 2026:
 
-![Captura JaCoCo](docs/jacoco-report.png)
+| Categoria | Cantidad | Rating |
+| --- | ---: | --- |
+| Bugs | 1 | C |
+| Vulnerabilidades | 1 | D |
+| Code Smells | 3 | A |
+| Cobertura | 69.4% | - |
 
-## CI/CD
+## Hallazgos principales identificados
 
-El workflow `.github/workflows/ci.yml` se ejecuta en cada `push` o
-`pull_request` hacia `main` o `master`, compila el proyecto, corre `mvn verify` y
-sube el artefacto `jacoco-report` con el reporte de cobertura.
+### Bug 1: Acceso a Optional sin verificar presencia
 
-## Entregables del laboratorio
+- Archivo: `src/main/java/com/universidad/productosservice/service/ProductoServiceImpl.java`, linea 59
+- Descripcion: el metodo `buscar` llama `producto.get()` sin validar `isPresent()` o `isEmpty()`, lo que puede lanzar `NoSuchElementException`.
+- Severidad: Major
 
-- Proyecto Maven con codigo fuente en `src/`.
-- Pruebas de repositorio con `@DataJpaTest`.
-- Pruebas de controlador con `@WebMvcTest`.
-- Configuracion de H2 en `src/test/resources/application-test.properties`.
-- Pipeline de GitHub Actions en `.github/workflows/ci.yml`.
-- Reporte JaCoCo generado en `target/site/jacoco/index.html`.
-- Evidencia de cobertura incluida en `docs/jacoco-report.png`.
+### Vulnerabilidad 1: Entidad persistente usada como cuerpo de entrada REST
+
+- Archivo: `src/main/java/com/universidad/productosservice/controller/ProductoController.java`, linea 42
+- Descripcion: el endpoint `POST /api/productos` recibe directamente la entidad JPA `Producto`; SonarQube recomienda usar un DTO/POJO simple.
+- Severidad: Critical
+
+### Code Smell 1: Inyeccion por campo
+
+- Archivo: `src/main/java/com/universidad/productosservice/service/ProductoServiceImpl.java`, linea 14
+- Descripcion: `ProductoRepository` se inyecta con `@Autowired` sobre un campo; SonarQube recomienda inyeccion por constructor.
+- Severidad: Major
+
+### Code Smell 2: TODO pendiente en entidad
+
+- Archivo: `src/main/java/com/universidad/productosservice/domain/Producto.java`, linea 18
+- Descripcion: queda documentada una tarea pendiente para mover logica de estado fuera de la entidad JPA.
+- Severidad: Info
+
+### Code Smell 3: TODO pendiente en servicio
+
+- Archivo: `src/main/java/com/universidad/productosservice/service/ProductoServiceImpl.java`, linea 47
+- Descripcion: queda pendiente implementar la logica de categoria y proveedor.
+- Severidad: Info
+
+## Capturas del dashboard
+
+![Dashboard SonarQube](docs/sonar-dashboard.png)
+
+![Detalle Bug](docs/sonar-bugs.png)
+
+![Detalle Code Smells](docs/sonar-code-smells.png)
+
+## Checkpoints verificados
+
+| Checkpoint | Estado |
+| --- | --- |
+| Contenedor `sonarqube` corriendo en Docker | Verificado con `docker ps` |
+| Dashboard local carga en `localhost:9000` | Verificado y capturado |
+| `sonar-project.properties` en la raiz | Completado |
+| Plugin JaCoCo con `prepare-agent` y `report` | Completado |
+| `.\mvnw.cmd clean verify` | `BUILD SUCCESS`, 23 pruebas, 0 fallos |
+| Reporte JaCoCo XML | Generado en `target/site/jacoco/jacoco.xml` |
+| Analisis SonarQube | `BUILD SUCCESS` |
+| App Spring Boot inicia sin errores de contexto | Verificado con `java -jar target/productos-service-0.0.1-SNAPSHOT.jar` |
+| Capturas en `docs/` | `sonar-dashboard.png`, `sonar-bugs.png`, `sonar-code-smells.png` |
+
+## Entregables
+
+- `README.md` con instrucciones, tabla de resultados, hallazgos y capturas.
+- `sonar-project.properties` en la raiz.
+- Codigo fuente en `src/` con problemas intencionales para el analisis inicial.
+- Reporte JaCoCo generado por `.\mvnw.cmd clean verify`.
+- Capturas de SonarQube en `docs/`.
+- Historial Git con mas de 3 commits descriptivos.
