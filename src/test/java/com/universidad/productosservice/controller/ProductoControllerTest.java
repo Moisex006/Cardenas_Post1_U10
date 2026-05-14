@@ -13,7 +13,9 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -32,9 +34,9 @@ class ProductoControllerTest {
     @Test
     void listarProductos_retorna200ConLista() throws Exception {
         List<Producto> lista = List.of(
-                new Producto(1L, "Laptop", 1500.0, 10),
-                new Producto(2L, "Mouse", 50.0, 100));
-        when(productoService.listarTodos()).thenReturn(lista);
+                producto(1L, "Laptop", 1500.0, 10),
+                producto(2L, "Mouse", 50.0, 100));
+        when(productoService.listar()).thenReturn(lista);
 
         mockMvc.perform(get("/api/productos")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -45,8 +47,9 @@ class ProductoControllerTest {
 
     @Test
     void crearProducto_datosValidos_retorna201() throws Exception {
-        Producto creado = new Producto(1L, "Tablet", 800.0, 5);
-        when(productoService.crear(anyString(), anyDouble(), anyInt())).thenReturn(creado);
+        Producto creado = producto(1L, "Tablet", 800.0, 5);
+        when(productoService.procesarProducto(anyString(), anyDouble(), anyInt(), isNull(), anyBoolean(), isNull()))
+                .thenReturn(creado);
 
         String json = """
                 {"nombre":"Tablet","precio":800.0,"stock":5}""";
@@ -61,10 +64,18 @@ class ProductoControllerTest {
 
     @Test
     void buscarProducto_noExistente_retorna404() throws Exception {
-        when(productoService.buscarPorId(99L))
-                .thenThrow(new RuntimeException("Producto no encontrado: 99"));
+        when(productoService.buscar(99L)).thenReturn(null);
 
         mockMvc.perform(get("/api/productos/99"))
                 .andExpect(status().isNotFound());
+    }
+
+    private Producto producto(Long id, String nombre, Double precio, Integer stock) {
+        Producto producto = new Producto();
+        producto.setId(id);
+        producto.setNombre(nombre);
+        producto.setPrecio(precio);
+        producto.setStock(stock);
+        return producto;
     }
 }

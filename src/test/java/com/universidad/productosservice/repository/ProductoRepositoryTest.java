@@ -27,7 +27,7 @@ class ProductoRepositoryTest {
 
     @Test
     void save_asignaIdAutomaticamente() {
-        Producto guardado = productoRepository.save(new Producto(null, "Laptop", 1500.0, 10));
+        Producto guardado = productoRepository.save(producto("Laptop", 1500.0, 10));
 
         assertNotNull(guardado.getId());
         assertTrue(guardado.getId() > 0);
@@ -35,7 +35,7 @@ class ProductoRepositoryTest {
 
     @Test
     void findById_existente_retornaProducto() {
-        Producto guardado = productoRepository.save(new Producto(null, "Mouse", 50.0, 100));
+        Producto guardado = productoRepository.save(producto("Mouse", 50.0, 100));
 
         Optional<Producto> resultado = productoRepository.findById(guardado.getId());
 
@@ -45,8 +45,8 @@ class ProductoRepositoryTest {
 
     @Test
     void findAll_retornaListaCompleta() {
-        productoRepository.save(new Producto(null, "Teclado", 80.0, 50));
-        productoRepository.save(new Producto(null, "Monitor", 350.0, 20));
+        productoRepository.save(producto("Teclado", 80.0, 50));
+        productoRepository.save(producto("Monitor", 350.0, 20));
 
         List<Producto> productos = productoRepository.findAll();
 
@@ -55,10 +55,18 @@ class ProductoRepositoryTest {
 
     @Test
     void deleteById_eliminaProducto() {
-        Producto guardado = productoRepository.save(new Producto(null, "Webcam", 90.0, 15));
+        Producto guardado = productoRepository.save(producto("Webcam", 90.0, 15));
 
         productoRepository.deleteById(guardado.getId());
 
         assertFalse(productoRepository.findById(guardado.getId()).isPresent());
+    }
+
+    private Producto producto(String nombre, Double precio, Integer stock) {
+        Producto producto = new Producto();
+        producto.setNombre(nombre);
+        producto.setPrecio(precio);
+        producto.setStock(stock);
+        return producto;
     }
 }
